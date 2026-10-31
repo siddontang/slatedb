@@ -30,11 +30,10 @@ use crate::{
 
 enum FetchTask {
     InFlight(AbortOnDropHandle<Result<VecDeque<Arc<Block>>, SlateDBError>>),
-    /// A single-block point read, polled by the iterator itself: one block, one
-    /// task and no read-ahead leave a spawn nothing to overlap, and `init`
-    /// awaits the first block either way. Dropping the future cancels the read,
-    /// as aborting the handle does. The mutex is only for `Sync`; polling goes
-    /// through `get_mut`, so no lock is held across an await.
+    /// The iterator polls this read when it permits only one fetch task.
+    /// The next batch starts after the current batch is consumed.
+    /// Dropping the future cancels the read, as aborting the handle does.
+    /// The mutex provides `Sync`. Polling uses `get_mut` and holds no lock.
     Inline(parking_lot::Mutex<BoxFuture<'static, Result<VecDeque<Arc<Block>>, SlateDBError>>>),
     Finished(VecDeque<Arc<Block>>),
 }
@@ -357,10 +356,8 @@ pub(crate) struct InternalSstIterator<'a> {
     fetch_tasks: VecDeque<FetchTask>,
     table_store: Arc<TableStore>,
     options: SstIteratorOptions,
-    /// A point range read by one fetch task: its one block, when the range
-    /// is one block, is polled inline rather than spawned. Fixed for the
-    /// iterator's life, so decided once here.
-    inline_point_read: bool,
+    /// Poll each batch inline when the iterator permits only one fetch task.
+    inline_fetch: bool,
     tracing_context: Option<SstTracingContext>,
     /// Buffer for descending iteration to maintain correct sequence order within keys.
     descending_buffer: Option<VecDeque<RowEntry>>,
@@ -383,7 +380,7 @@ impl<'a> InternalSstIterator<'a> {
             IterationOrder::Descending => Some(VecDeque::new()),
             IterationOrder::Ascending => None,
         };
-        let inline_point_read = view.point_key().is_some() && options.max_fetch_tasks == 1;
+        let inline_fetch = options.max_fetch_tasks == 1;
 
         Ok(Self {
             view,
@@ -394,7 +391,7 @@ impl<'a> InternalSstIterator<'a> {
             fetch_tasks: VecDeque::new(),
             table_store,
             options,
-            inline_point_read,
+            inline_fetch,
             tracing_context,
             descending_buffer,
             pending_entry: None,
@@ -516,8 +513,7 @@ impl<'a> InternalSstIterator<'a> {
         }
     }
 
-    /// Starts the read of `blocks`: inline for a one-task point read's single
-    /// block, as a task on the runtime for everything else.
+    /// Poll one-task reads inline. Spawn reads when multiple fetch tasks are permitted.
     fn start_fetch(&self, index: Arc<SsTableIndexOwned>, blocks: Range<usize>) -> FetchTask {
         let table = self.view.table_as_ref().sst.clone();
         let table_store = self.table_store.clone();
@@ -525,7 +521,6 @@ impl<'a> InternalSstIterator<'a> {
         let segment = self.options.segment.clone();
         let read_trace = self.read_trace();
         let sst_level = self.sst_level().cloned();
-        let single_block = blocks.len() == 1;
         let read = async move {
             table_store
                 .read_blocks_using_index(
@@ -539,7 +534,7 @@ impl<'a> InternalSstIterator<'a> {
                 )
                 .await
         };
-        if self.inline_point_read && single_block {
+        if self.inline_fetch {
             FetchTask::Inline(parking_lot::Mutex::new(Box::pin(read)))
         } else {
             FetchTask::InFlight(AbortOnDropHandle::new(spawn_with_optional_subscriber(read)))
@@ -3345,7 +3340,10 @@ mod tests {
                 ..,
                 sst,
                 table_store.clone(),
-                SstIteratorOptions::default(),
+                SstIteratorOptions {
+                    max_fetch_tasks: 2,
+                    ..SstIteratorOptions::default()
+                },
             )
             .await
         };
@@ -4182,4 +4180,6 @@ mod tests {
             "no prefix evaluator exists without a prefix-capable policy"
         );
     }
+
+    include!("sst_iter/scan2166_tests.rs");
 }
