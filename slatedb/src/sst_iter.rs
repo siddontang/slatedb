@@ -1251,6 +1251,14 @@ fn block_fetch_panic_error(
     SlateDBError::BackgroundTaskPanic(task_name)
 }
 
+#[cfg(all(test, feature = "foyer"))]
+#[path = "sst_iter/bench2166.rs"]
+mod bench2166;
+
+#[cfg(all(test, feature = "foyer", feature = "aws"))]
+#[path = "sst_iter/bench2166_concurrency.rs"]
+mod bench2166_concurrency;
+
 #[cfg(test)]
 mod tests {
     use super::*;

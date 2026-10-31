@@ -1,0 +1,63 @@
+{
+  "single": {
+    "source_commit": "65514581173f05b586a0ffc6d8351278bfddba2a",
+    "hardware": "Apple M4, 10 CPU cores, 24 GiB RAM",
+    "os": "macOS 27.0.1",
+    "rustc": "rustc 1.91.1 (ed61e7d7e 2025-11-07)",
+    "build": "cargo test --locked --release -p slatedb --lib --no-run",
+    "rounds_per_variant_and_caller": 3,
+    "binaries": {
+      "baseline": "12693421d26a3f204fa43e54500f00b81c4542701f7efa99cca710e111259934",
+      "inline": "a9e13a6ad1353eb2bd123f71b6520317f62bcd8e2b5fc65005adddadfc2beddc"
+    },
+    "patch_sha256": "e81864fc09bba6514dfbff8b223e1b76f9b4e7697954933f2bc01f0372553351",
+    "focused_tests_passed": 84,
+    "related_tests_passed": 229,
+    "clippy": "cargo clippy --locked -p slatedb --lib --tests -- -D warnings",
+    "clippy_passed": true,
+    "scenario_notes": {
+      "warm_cache": "Foyer, 64 MiB, 4 shards. Read every block before each case.",
+      "public_scan": "Remote durability, cache_blocks=true, 2048 keys, 128-byte values.",
+      "multiple_ssts": "Eight L0 SSTs contain versions of the same keys. Compaction and GC are disabled.",
+      "delay_control": "InMemory store with a requested 1 ms timer delay per GET. Measured waits exceed 1 ms.",
+      "external": "The scan runs in Runtime::block_on on the caller thread.",
+      "worker": "The scan runs in one spawned Tokio task on a two-worker runtime.",
+      "limits": "Single caller, no external network, no binding overhead, no concurrent-client fairness measurement."
+    }
+  },
+  "concurrency_and_s3": {
+    "source_commit": "65514581173f05b586a0ffc6d8351278bfddba2a",
+    "profile": "release",
+    "rustc": "rustc 1.91.1 (ed61e7d7e 2025-11-07)",
+    "hardware": "Apple M4, 10 CPU cores, 24 GiB RAM",
+    "workers": [
+      1,
+      2
+    ],
+    "rustfs_version": "1.0.4",
+    "phase_duration_ms": 2000,
+    "probe_interval_us": 1000,
+    "rounds_per_variant": 3,
+    "binary_sha256": {
+      "baseline": "82a1ca33f0019e98f9b17751dd4971d453fe09f2e07cce870504936bb7b38343",
+      "inline": "9b8a7832014280db56f5ba4ac913dcefce57330795dae161d99b518248a7b7a5"
+    },
+    "probe": "A separate OS thread submits a lightweight Tokio task every millisecond.",
+    "fairness": "The Jain index uses completed queries per client within the shared time window.",
+    "s3_cache": "Uncached cases disable SlateDB block caching. Metadata stays cached.",
+    "scenario_phases": 158,
+    "focused_rounds_per_variant": 5,
+    "s3_get_requests": 820058,
+    "unexpected_get_errors": 0,
+    "minimum_completed_queries_per_client": 4,
+    "validation": "Each scan asserts the key order, value bytes and row count.",
+    "host_load_note": "macOS storage analysis used CPU time during the run. S3 samples varied.",
+    "rustfs_stopped": true,
+    "temporary_data_removed": true,
+    "temporary_credentials_removed": true,
+    "clippy_passed": true,
+    "format_passed": true,
+    "patch_sha256": "8e80a2d706a93ef426dba96c96206b3e1b69f1f15d4327264f51229618b89f0b",
+    "benchmark_source_sha256": "6f85576609209e3b75fec4c314e75f880f5c29d83da0698fbf48036bc918411e"
+  }
+}

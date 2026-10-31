@@ -1,0 +1,52 @@
+[
+  {
+    "caller": "worker",
+    "case": "db/warm/8sst/batch64k",
+    "rounds": 3,
+    "samples_per_round": 600,
+    "baseline": {
+      "median_p50_us": 9267.25,
+      "median_p95_us": 9583.375,
+      "p50_us_by_run": [
+        9291.625,
+        9180.834,
+        9267.25
+      ]
+    },
+    "inline": {
+      "median_p50_us": 9213.375,
+      "median_p95_us": 9594.791,
+      "p50_us_by_run": [
+        9213.375,
+        9211.375,
+        9263.959
+      ]
+    },
+    "latency_reduction_percent": 0.5813482964201921
+  },
+  {
+    "caller": "worker",
+    "case": "db/warm/8sst/tasks4",
+    "rounds": 3,
+    "samples_per_round": 600,
+    "baseline": {
+      "median_p50_us": 9874.792,
+      "median_p95_us": 10143.417,
+      "p50_us_by_run": [
+        9729.292,
+        9874.792,
+        10043.542
+      ]
+    },
+    "inline": {
+      "median_p50_us": 9839.542,
+      "median_p95_us": 10113.0,
+      "p50_us_by_run": [
+        9920.042,
+        9753.083,
+        9839.542
+      ]
+    },
+    "latency_reduction_percent": 0.3569695442698917
+  }
+]
